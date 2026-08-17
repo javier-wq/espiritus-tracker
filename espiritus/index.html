@@ -300,7 +300,12 @@ function build(){
       });
       card.querySelector('.maxbtn').addEventListener('click', () => {
         const it = item(id);
-        setItem(id, it.m ? {m:false} : {m:true, o:true});
+        if(it.m){
+          // si el check lo puso el propio MAX (am), al quitarlo vuelve a no-obtenido
+          setItem(id, it.am ? {m:false, o:false, am:false} : {m:false});
+        } else {
+          setItem(id, {m:true, o:true, am:!it.o});
+        }
       });
       grid.appendChild(card);
     }
@@ -440,7 +445,8 @@ function merge(local, cloud){
     out.items[id] = {
       o: !!(a.o || b.o),
       l: Math.max(a.l || 0, b.l || 0),
-      m: !!(a.m || b.m)
+      m: !!(a.m || b.m),
+      am: !!(a.am || b.am)
     };
   }
   return out;
