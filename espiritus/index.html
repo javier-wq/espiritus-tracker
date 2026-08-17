@@ -301,10 +301,10 @@ function build(){
       card.querySelector('.maxbtn').addEventListener('click', () => {
         const it = item(id);
         if(it.m){
-          // si el check lo puso el propio MAX (am), al quitarlo vuelve a no-obtenido
-          setItem(id, it.am ? {m:false, o:false, am:false} : {m:false});
+          // al quitar MAX queda obtenido, con su nivel anterior o nivel 1 si no tenia
+          setItem(id, {m:false, o:true, l:Math.max(1, it.l)});
         } else {
-          setItem(id, {m:true, o:true, am:!it.o});
+          setItem(id, {m:true, o:true});
         }
       });
       grid.appendChild(card);
@@ -445,8 +445,7 @@ function merge(local, cloud){
     out.items[id] = {
       o: !!(a.o || b.o),
       l: Math.max(a.l || 0, b.l || 0),
-      m: !!(a.m || b.m),
-      am: !!(a.am || b.am)
+      m: !!(a.m || b.m)
     };
   }
   return out;
