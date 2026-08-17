@@ -480,7 +480,10 @@ onAuthStateChanged(auth, async user => {
       await pushNow(merged);
     } catch(e){
       console.error(e);
-      setSync('error al cargar la nube', false);
+      const hint = e.code === 'permission-denied'
+        ? 'sin permiso: revisa las Reglas de Firestore'
+        : 'error: ' + (e.code || e.message);
+      setSync(hint, false);
     }
   } else {
     uid = null;
