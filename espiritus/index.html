@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Espíritus</title>
+<style>
+  :root{
+    --bg:#0d0b1e; --bg2:#171233; --card:#1e1840; --card2:#262052;
+    --border:#3a3270; --text:#f0edff; --muted:#9a92c9;
+    --accent:#8b5cf6; --gold:#f5c542; --green:#3ddc84; --pink:#ff5ea8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Segoe UI',system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -100px,#2a1f5e 0%,var(--bg) 60%);
+    color:var(--text); min-height:100vh; padding-bottom:60px;
+  }
+  header{
+    position:sticky; top:0; z-index:10;
+    background:rgba(13,11,30,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);
+    padding:14px 20px;
+  }
+  .head-top{display:flex; flex-wrap:wrap; align-items:center; gap:14px; max-width:1200px; margin:0 auto;}
+  h1{
+    font-size:1.5rem; letter-spacing:1px; text-transform:uppercase; font-weight:800;
+    background:linear-gradient(90deg,#a78bfa,#f5c542);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-right:auto;
+  }
+  .stats{display:flex; gap:18px; font-size:.85rem;}
+  .stat b{font-size:1.05rem}
+  .stat .obtenidos b{color:var(--green)}
+  .stat.maxeados b{color:var(--gold)}
+  .barwrap{max-width:1200px; margin:10px auto 0; display:flex; flex-direction:column; gap:5px;}
+  .bar{height:8px; background:var(--card); border-radius:99px; overflow:hidden; position:relative;}
+  .bar>div{height:100%; border-radius:99px; transition:width .4s;}
+  .bar.owned>div{background:linear-gradient(90deg,#34d399,#3ddc84)}
+  .bar.maxed>div{background:linear-gradient(90deg,#f59e0b,#f5c542)}
+  .barlabel{font-size:.72rem; color:var(--muted); display:flex; justify-content:space-between;}
+  .controls{max-width:1200px; margin:12px auto 0; display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .tab{
+    border:1px solid var(--border); background:var(--card); color:var(--muted);
+    padding:7px 16px; border-radius:99px; cursor:pointer; font-size:.85rem; font-weight:600;
+    transition:.15s;
+  }
+  .tab:hover{border-color:var(--accent)}
+  .tab.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+  #search{
+    margin-left:auto; background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:7px 14px; border-radius:99px; font-size:.85rem; width:200px; outline:none;
+  }
+  #search:focus{border-color:var(--accent)}
+  .btn-small{
+    border:1px solid var(--border); background:transparent; color:var(--muted);
+    padding:6px 12px; border-radius:8px; cursor:pointer; font-size:.75rem;
+  }
+  .btn-small:hover{color:var(--text); border-color:var(--accent)}
+  main{max-width:1200px; margin:20px auto; padding:0 20px;}
+  .family{margin-bottom:26px;}
+  .fam-head{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+  .fam-name{
+    font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+    cursor:pointer; border-bottom:1px dashed transparent;
+  }
+  .fam-name:hover{border-bottom-color:var(--muted)}
+  .fam-name input{
+    background:var(--card); border:1px solid var(--accent); color:var(--text);
+    font-size:1rem; font-weight:700; padding:2px 8px; border-radius:6px; width:220px; outline:none;
+  }
+  .fam-count{font-size:.75rem; color:var(--muted); background:var(--card); padding:3px 10px; border-radius:99px;}
+  .fam-count.complete{color:#0d0b1e; background:var(--green); font-weight:700;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--bg2));
+    border:2px solid var(--border); border-radius:14px; padding:10px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    transition:.15s; position:relative; overflow:hidden;
+  }
+  .card:hover{transform:translateY(-2px)}
+  .card .img{
+    width:100%; height:120px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; position:relative;
+  }
+  .card img{max-height:120px; max-width:100%; filter:grayscale(1) brightness(.45); transition:.2s; border-radius:8px;}
+  .card.owned img{filter:none}
+  .card.owned{border-color:var(--green)}
+  .card.maxed{border-color:var(--gold); box-shadow:0 0 14px rgba(245,197,66,.35);}
+  .check{
+    position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
+    background:var(--green); color:#0d0b1e; font-weight:900; font-size:.8rem;
+    display:none; align-items:center; justify-content:center; pointer-events:none;
+  }
+  .card.owned .check{display:flex}
+  .vname{font-size:.72rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; text-align:center;}
+  .card.maxed .vname{color:var(--gold)}
+  .lvlrow{display:flex; align-items:center; gap:6px; width:100%; justify-content:center;}
+  .lvlrow button{
+    width:24px; height:24px; border-radius:6px; border:1px solid var(--border);
+    background:var(--card2); color:var(--text); cursor:pointer; font-weight:700; font-size:.85rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .lvlrow button:hover{border-color:var(--accent)}
+  .lvl{font-size:.78rem; min-width:38px; text-align:center; color:var(--muted);}
+  .lvl b{color:var(--text)}
+  .maxbtn{
+    width:100%; border:1px solid var(--border); background:transparent; color:var(--muted);
+    border-radius:8px; padding:4px 0; cursor:pointer; font-size:.72rem; font-weight:800;
+    letter-spacing:1px;
+  }
+  .maxbtn:hover{border-color:var(--gold); color:var(--gold)}
+  .card.maxed .maxbtn{background:var(--gold); color:#0d0b1e; border-color:var(--gold)}
+  .hidden{display:none !important}
+  .empty{color:var(--muted); text-align:center; padding:60px 0; font-size:.95rem;}
+  footer{max-width:1200px; margin:30px auto 0; padding:0 20px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:.75rem;}
+  @media(max-width:600px){
+    .grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));}
+    .card .img{height:90px}.card img{max-height:90px}
+    #search{width:100%; margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-top">
+    <h1>⚡ Mis Espíritus</h1>
+    <div class="stats">
+      <div class="stat obtenidos">Obtenidos <b id="stat-owned">0</b>/<span id="stat-total">0</span></div>
+      <div class="stat maxeados">Maxeados <b id="stat-maxed">0</b>/<span id="stat-total2">0</span></div>
+    </div>
+  </div>
+  <div class="barwrap">
+    <div class="bar owned"><div id="bar-owned" style="width:0%"></div></div>
+    <div class="bar maxed"><div id="bar-maxed" style="width:0%"></div></div>
+  </div>
+  <div class="controls">
+    <button class="tab active" data-view="all">Todos</button>
+    <button class="tab" data-view="owned">Mi colección</button>
+    <button class="tab" data-view="maxed">Maxeados</button>
+    <button class="tab" data-view="missing">Me faltan</button>
+    <input id="search" type="text" placeholder="Buscar espíritu...">
+  </div>
+</header>
+
+<main id="app"></main>
+<div class="empty hidden" id="empty">No hay espíritus en esta vista todavía.</div>
+
+<footer>
+  <span>Los datos se guardan automáticamente en este navegador.</span>
+  <button class="btn-small" id="export">⬇ Exportar respaldo</button>
+  <button class="btn-small" id="import">⬆ Importar respaldo</button>
+  <button class="btn-small" id="reset">🗑 Reiniciar todo</button>
+  <input type="file" id="importfile" accept=".json" style="display:none">
+  <span style="margin-left:auto">💡 Haz clic en la imagen para marcar obtenido · doble clic en el nombre de la familia para renombrarla</span>
+</footer>
+
+<script>
+// ---- Datos: 22 familias, 117 espíritus (recortados de la plantilla) ----
+const V = { B:'Base', D:'Dorado', G:'Gomoso', C:'Cósmico', H:'Holográfico', J:'Gema', S:'Sombrío' };
+const FAMILIES = [
+  {id:'L00', name:'Sorbete',      v:['B','D','G','C','H','J']},
+  {id:'R00', name:'Dormilón',     v:['B','D','G','C','S']},
+  {id:'L01', name:'Arbolito',     v:['B','D','G','C','S','J']},
+  {id:'R01', name:'Demonio',      v:['B','D','G','C','J']},
+  {id:'L02', name:'Fuego',        v:['B','D','G','C','H','S']},
+  {id:'R02', name:'Punk',         v:['B','D','G','C','S']},
+  {id:'L03', name:'Pato',         v:['B','D','G','C','J']},
+  {id:'R03', name:'Rey Calavera', v:['B','D','G','C','H']},
+  {id:'L04', name:'Fantasma',     v:['B','D','G','C','H']},
+  {id:'R04', name:'Tormenta',     v:['B','D','G','C','H','S','J']},
+  {id:'L05', name:'Pescadito',    v:['B','D','G','C','S']},
+  {id:'R05', name:'Goleador',     v:['B','D','G','C','H']},
+  {id:'L06', name:'Parca',        v:['B','D','G','C','H','J','S']},
+  {id:'R06', name:'Aracno',       v:['B','D','G','C','H']},
+  {id:'L07', name:'Encapuchado',  v:['B','D','G','C','J']},
+  {id:'R07', name:'Nubecita',     v:['B','D','G','C','H']},
+  {id:'L08', name:'Especiales',   v:null, names:['Papa','Futbolista','Pollo','Ironmouse','John Wick']},
+  {id:'R08', name:'Diablo',       v:['B','D','G','C','S']},
+  {id:'L09', name:'Murciélago',   v:['B','D','G','C','H','S']},
+  {id:'R09', name:'Perita',       v:['B','D','G','H','C']},
+  {id:'L10', name:'Gema',         v:null, names:['Gema I','Gema II','Gema III','Gema IV']},
+  {id:'R10', name:'Llama',        v:['B','D','G','C','J']},
+];
+
+const KEY = 'espiritus-tracker-v1';
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ state = {}; }
+state.items = state.items || {};   // id -> {o:owned, l:level, m:maxed}
+state.names = state.names || {};   // familyId -> custom name
+let view = 'all', query = '';
+
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function item(id){ return state.items[id] || {o:false, l:0, m:false}; }
+function setItem(id, patch){
+  state.items[id] = Object.assign(item(id), patch);
+  save(); refresh();
+}
+
+function allIds(){
+  const ids = [];
+  for(const f of FAMILIES){
+    const n = f.v ? f.v.length : f.names.length;
+    for(let i=0;i<n;i++) ids.push(f.id + 'c' + i);
+  }
+  return ids;
+}
+const TOTAL = allIds().length;
+
+function famName(f){ return state.names[f.id] || f.name; }
+
+function build(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  for(const f of FAMILIES){
+    const n = f.v ? f.v.length : f.names.length;
+    const sec = document.createElement('section');
+    sec.className = 'family';
+    sec.dataset.fam = f.id;
+
+    const head = document.createElement('div');
+    head.className = 'fam-head';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'fam-name';
+    nameEl.textContent = famName(f);
+    nameEl.title = 'Doble clic para renombrar';
+    nameEl.addEventListener('dblclick', () => {
+      const inp = document.createElement('input');
+      inp.value = famName(f);
+      nameEl.textContent = '';
+      nameEl.appendChild(inp);
+      inp.focus(); inp.select();
+      const done = () => {
+        const val = inp.value.trim();
+        if(val) state.names[f.id] = val;
+        save(); refresh(); nameEl.textContent = famName(f);
+      };
+      inp.addEventListener('blur', done);
+      inp.addEventListener('keydown', e => { if(e.key==='Enter') inp.blur(); });
+    });
+    const count = document.createElement('span');
+    count.className = 'fam-count';
+    head.appendChild(nameEl); head.appendChild(count);
+    sec.appendChild(head);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    for(let i=0;i<n;i++){
+      const id = f.id + 'c' + i;
+      const label = f.v ? V[f.v[i]] : f.names[i];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = id;
+      card.dataset.label = label.toLowerCase();
+      card.innerHTML = `
+        <div class="img"><img src="img/${id}.png" alt="${label}" loading="lazy"><div class="check">✓</div></div>
+        <div class="vname">${label}</div>
+        <div class="lvlrow">
+          <button class="dec">−</button>
+          <span class="lvl">Nv <b>0</b></span>
+          <button class="inc">+</button>
+        </div>
+        <button class="maxbtn">★ MAX</button>`;
+      card.querySelector('.img').addEventListener('click', () => {
+        const it = item(id);
+        setItem(id, it.o ? {o:false, m:false, l:0} : {o:true});
+      });
+      card.querySelector('.inc').addEventListener('click', () => {
+        const it = item(id);
+        setItem(id, {o:true, l:it.l + 1});
+      });
+      card.querySelector('.dec').addEventListener('click', () => {
+        const it = item(id);
+        setItem(id, {l:Math.max(0, it.l - 1), m:false});
+      });
+      card.querySelector('.maxbtn').addEventListener('click', () => {
+        const it = item(id);
+        setItem(id, it.m ? {m:false} : {m:true, o:true});
+      });
+      grid.appendChild(card);
+    }
+    sec.appendChild(grid);
+    app.appendChild(sec);
+  }
+}
+
+function refresh(){
+  let owned = 0, maxed = 0, visibleAny = false;
+  document.querySelectorAll('.family').forEach(sec => {
+    const f = FAMILIES.find(x => x.id === sec.dataset.fam);
+    const fname = famName(f).toLowerCase();
+    let famOwned = 0, famTotal = 0, famVisible = false;
+    sec.querySelectorAll('.card').forEach(card => {
+      const id = card.dataset.id;
+      const it = item(id);
+      famTotal++;
+      if(it.o){ owned++; famOwned++; }
+      if(it.m) maxed++;
+      card.classList.toggle('owned', !!it.o);
+      card.classList.toggle('maxed', !!it.m);
+      card.querySelector('.lvl b').textContent = it.l;
+      const matchQ = !query || fname.includes(query) || card.dataset.label.includes(query);
+      let matchV = true;
+      if(view==='owned') matchV = it.o;
+      else if(view==='maxed') matchV = it.m;
+      else if(view==='missing') matchV = !it.o;
+      const show = matchQ && matchV;
+      card.classList.toggle('hidden', !show);
+      if(show){ famVisible = true; visibleAny = true; }
+    });
+    const count = sec.querySelector('.fam-count');
+    count.textContent = famOwned + '/' + famTotal;
+    count.classList.toggle('complete', famOwned === famTotal);
+    sec.classList.toggle('hidden', !famVisible);
+  });
+  document.getElementById('stat-owned').textContent = owned;
+  document.getElementById('stat-maxed').textContent = maxed;
+  document.getElementById('stat-total').textContent = TOTAL;
+  document.getElementById('stat-total2').textContent = TOTAL;
+  document.getElementById('bar-owned').style.width = (owned/TOTAL*100) + '%';
+  document.getElementById('bar-maxed').style.width = (maxed/TOTAL*100) + '%';
+  document.getElementById('empty').classList.toggle('hidden', visibleAny);
+}
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  view = t.dataset.view;
+  refresh();
+}));
+document.getElementById('search').addEventListener('input', e => {
+  query = e.target.value.trim().toLowerCase();
+  refresh();
+});
+document.getElementById('export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'espiritus-respaldo.json';
+  a.click();
+});
+document.getElementById('import').addEventListener('click', () => document.getElementById('importfile').click());
+document.getElementById('importfile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if(data && data.items){ state = data; state.names = state.names || {}; save(); refresh(); alert('Respaldo importado ✓'); }
+      else alert('Archivo no válido');
+    } catch(err){ alert('Archivo no válido'); }
+  };
+  r.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('reset').addEventListener('click', () => {
+  if(confirm('¿Seguro que quieres borrar TODO tu progreso?')){
+    state = {items:{}, names:{}}; save(); refresh();
+  }
+});
+
+build();
+refresh();
+</script>
+</body>
+</html>
