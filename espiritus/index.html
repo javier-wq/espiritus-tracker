@@ -57,6 +57,19 @@
     padding:6px 12px; border-radius:8px; cursor:pointer; font-size:.75rem;
   }
   .btn-small:hover{color:var(--text); border-color:var(--accent)}
+  .authbar{display:flex; align-items:center; gap:10px;}
+  .authbar.hidden{display:none}
+  #login{
+    border:1px solid var(--border); background:var(--card); color:var(--text);
+    padding:7px 14px; border-radius:99px; cursor:pointer; font-size:.8rem; font-weight:600;
+  }
+  #login:hover{border-color:var(--gold)}
+  #userinfo{display:flex; align-items:center; gap:8px; font-size:.78rem;}
+  #userinfo img{width:26px; height:26px; border-radius:50%; border:1px solid var(--border);}
+  #syncstate{font-size:.7rem; color:var(--muted);}
+  #syncstate.ok{color:var(--green)}
+  #logout{border:none; background:none; color:var(--muted); cursor:pointer; font-size:.7rem; text-decoration:underline;}
+  #logout:hover{color:var(--text)}
   main{max-width:1200px; margin:20px auto; padding:0 20px;}
   .family{margin-bottom:26px;}
   .fam-head{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
@@ -125,6 +138,15 @@
 <header>
   <div class="head-top">
     <h1>⚡ Mis Espíritus</h1>
+    <div class="authbar hidden" id="authbar">
+      <button id="login">🔑 Iniciar sesión con Google</button>
+      <div id="userinfo" class="hidden">
+        <img id="userpic" alt="">
+        <span id="username"></span>
+        <span id="syncstate"></span>
+        <button id="logout">salir</button>
+      </div>
+    </div>
     <div class="stats">
       <div class="stat obtenidos">Obtenidos <b id="stat-owned">0</b>/<span id="stat-total">0</span></div>
       <div class="stat maxeados">Maxeados <b id="stat-maxed">0</b>/<span id="stat-total2">0</span></div>
@@ -190,7 +212,10 @@ state.items = state.items || {};   // id -> {o:owned, l:level, m:maxed}
 state.names = state.names || {};   // familyId -> custom name
 let view = 'all', query = '';
 
-function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(state));
+  if(window._cloudPush) window._cloudPush(state);
+}
 function item(id){ return state.items[id] || {o:false, l:0, m:false}; }
 function setItem(id, patch){
   state.items[id] = Object.assign(item(id), patch);
@@ -362,6 +387,113 @@ document.getElementById('reset').addEventListener('click', () => {
 
 build();
 refresh();
+
+// Puntos de enganche para la sincronización con Firebase (módulo de abajo)
+window._getState = () => state;
+window._applyState = (s) => {
+  state = s;
+  state.items = state.items || {};
+  state.names = state.names || {};
+  localStorage.setItem(KEY, JSON.stringify(state));
+  refresh();
+};
+</script>
+
+<script type="module">
+// --- Sincronización con Firebase (Google + Firestore). Si falla la carga
+// (sin internet, bloqueador), la página sigue funcionando con localStorage. ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc }
+  from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBU-BSP41WxdaRm65Gzdjpm9ZfycSk1rvs",
+  authDomain: "ftlista.firebaseapp.com",
+  projectId: "ftlista",
+  storageBucket: "ftlista.firebasestorage.app",
+  messagingSenderId: "377967987939",
+  appId: "1:377967987939:web:35c4535f8e9317f2dc09d6"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+$('authbar').classList.remove('hidden');
+
+let uid = null, pushTimer = null;
+
+function setSync(txt, ok){
+  $('syncstate').textContent = txt;
+  $('syncstate').classList.toggle('ok', !!ok);
+}
+
+// une progreso local y de la nube sin perder nada de ninguno de los dos
+function merge(local, cloud){
+  const out = { items: {}, names: Object.assign({}, cloud.names || {}, local.names || {}) };
+  const ids = new Set([...Object.keys(local.items || {}), ...Object.keys(cloud.items || {})]);
+  for(const id of ids){
+    const a = (local.items || {})[id] || {}, b = (cloud.items || {})[id] || {};
+    out.items[id] = {
+      o: !!(a.o || b.o),
+      l: Math.max(a.l || 0, b.l || 0),
+      m: !!(a.m || b.m)
+    };
+  }
+  return out;
+}
+
+async function pushNow(state){
+  if(!uid) return;
+  try {
+    setSync('guardando…', false);
+    await setDoc(doc(db, 'users', uid), state);
+    setSync('☁ sincronizado', true);
+  } catch(e){
+    console.error(e);
+    setSync('sin conexión (guardado local)', false);
+  }
+}
+
+window._cloudPush = (state) => {
+  if(!uid) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => pushNow(state), 800);
+};
+
+onAuthStateChanged(auth, async user => {
+  if(user){
+    uid = user.uid;
+    $('login').classList.add('hidden');
+    $('userinfo').classList.remove('hidden');
+    $('username').textContent = user.displayName || user.email;
+    $('userpic').src = user.photoURL || '';
+    try {
+      setSync('cargando…', false);
+      const snap = await getDoc(doc(db, 'users', uid));
+      const cloud = snap.exists() ? snap.data() : { items: {}, names: {} };
+      const merged = merge(window._getState(), cloud);
+      window._applyState(merged);
+      await pushNow(merged);
+    } catch(e){
+      console.error(e);
+      setSync('error al cargar la nube', false);
+    }
+  } else {
+    uid = null;
+    $('login').classList.remove('hidden');
+    $('userinfo').classList.add('hidden');
+  }
+});
+
+$('login').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e){ if(e.code !== 'auth/popup-closed-by-user') alert('No se pudo iniciar sesión: ' + e.message); }
+});
+$('logout').addEventListener('click', () => signOut(auth));
 </script>
 </body>
 </html>
