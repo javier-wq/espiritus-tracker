@@ -1,2 +1,14 @@
 [build]
   publish = "espiritus"
+
+# Proxy del handler de autenticacion de Firebase para que el login
+# ocurra en el mismo dominio (evita "missing initial state" en moviles)
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://ftlista.firebaseapp.com/__/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/__/firebase/*"
+  to = "https://ftlista.firebaseapp.com/__/firebase/:splat"
+  status = 200
